@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { TransportRequest } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/lib/routes';
 import { useAppContext } from '@/context/AppContext';
 import { useToast } from '@/components/feedback/Toast';
 
@@ -50,7 +51,7 @@ export default function RequestsPage() {
       `Counter offer of ${parsedRate.toLocaleString()} RWF applied. Opening live tracking.`,
       'success',
     );
-    navigate('/tracking');
+    navigate(ROUTES.admin.tracking);
   };
 
   return (
@@ -209,7 +210,7 @@ export default function RequestsPage() {
                             `Request for ${req.cropType} accepted. Consignment assigned to TRK-882.`,
                             'success',
                           );
-                          navigate('/tracking');
+                          navigate(ROUTES.admin.tracking);
                         }}
                         className="bg-primary text-white hover:bg-primary-container rounded-xl py-3 text-xs font-sans font-bold transition-all text-center shadow-md active:scale-95 cursor-pointer"
                       >

@@ -1,12 +1,31 @@
 import express from 'express';
 import path from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import type { AuditMetrics } from '../src/lib/types';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+
+function resolveClerkPublishableKeyFromEnv(): string | undefined {
+  for (const key of [
+    process.env.VITE_CLERK_PUBLISHABLE_KEY,
+    process.env.VITE_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    process.env.CLERK_PUBLISHABLE_KEY,
+  ]) {
+    const trimmed = key?.trim();
+    if (trimmed) return trimmed;
+  }
+  return undefined;
+}
+
+function buildRuntimeConfigScript(): string {
+  const config = {
+    VITE_CLERK_PUBLISHABLE_KEY: resolveClerkPublishableKeyFromEnv() ?? '',
+  };
+  return `<script>window.__MAVUNO_RUNTIME_CONFIG__=${JSON.stringify(config)}</script>`;
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -80,9 +99,16 @@ Be specific with numbers from the data. Professional tone. No markdown headings.
 
 const distPath = path.join(__dirname, '..', 'dist');
 if (existsSync(distPath)) {
-  app.use(express.static(distPath));
+  const indexPath = path.join(distPath, 'index.html');
+  const indexTemplate = readFileSync(indexPath, 'utf-8');
+  const runtimeConfigScript = buildRuntimeConfigScript();
+
+  app.use(express.static(distPath, { index: false }));
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+    const html = indexTemplate.includes('</head>')
+      ? indexTemplate.replace('</head>', `${runtimeConfigScript}</head>`)
+      : `${runtimeConfigScript}${indexTemplate}`;
+    res.type('html').send(html);
   });
 }
 

@@ -2,17 +2,18 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { useAppContext } from '@/context/AppContext';
+import { ROUTES } from '@/lib/routes';
 
 function getHeaderTitle(pathname: string): string {
-  if (pathname === '/' || pathname.startsWith('/dashboard')) {
+  if (pathname === ROUTES.admin.root) {
     return 'Operations Control Tower';
   }
-  if (pathname.startsWith('/users')) return 'Operator Registry';
-  if (pathname.startsWith('/fleet')) return 'Logistics Fleet Manager';
-  if (pathname.startsWith('/requests')) return 'Active Consignment Leads';
-  if (pathname.startsWith('/tracking')) return 'Live Dispatch Tracking';
-  if (pathname.startsWith('/reports')) return 'Financial Ledger Audit';
-  if (pathname.startsWith('/settings')) return 'Global System Parameters';
+  if (pathname.startsWith(ROUTES.admin.users)) return 'Operator Registry';
+  if (pathname.startsWith(ROUTES.admin.fleet)) return 'Logistics Fleet Manager';
+  if (pathname.startsWith(ROUTES.admin.requests)) return 'Active Consignment Leads';
+  if (pathname.startsWith(ROUTES.admin.tracking)) return 'Live Dispatch Tracking';
+  if (pathname.startsWith(ROUTES.admin.reports)) return 'Financial Ledger Audit';
+  if (pathname.startsWith(ROUTES.admin.settings)) return 'Global System Parameters';
   return 'Operations Dashboard';
 }
 
@@ -20,8 +21,8 @@ export default function AppLayout() {
   const { pathname } = useLocation();
   const { unverifiedCount } = useAppContext();
   const showSearchBar =
-    pathname.startsWith('/users') || pathname.startsWith('/reports');
-  const searchPlaceholder = pathname.startsWith('/users')
+    pathname.startsWith(ROUTES.admin.users) || pathname.startsWith(ROUTES.admin.reports);
+  const searchPlaceholder = pathname.startsWith(ROUTES.admin.users)
     ? 'Search operators...'
     : 'Search transactions...';
 

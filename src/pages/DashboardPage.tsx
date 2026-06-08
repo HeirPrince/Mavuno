@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/lib/routes';
 import { useAppContext } from '@/context/AppContext';
 import { useDeepSeekAudit } from '@/hooks/useDeepSeekAudit';
 import Modal from '@/components/feedback/Modal';
@@ -26,7 +27,7 @@ export default function DashboardPage() {
   const { showToast } = useToast();
   const [auditModalOpen, setAuditModalOpen] = useState(false);
 
-  const onNewDispatchClick = () => navigate('/requests');
+  const onNewDispatchClick = () => navigate(ROUTES.admin.requests);
   const [alerts, setAlerts] = useState([
     {
       id: "a1",

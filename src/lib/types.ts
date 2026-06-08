@@ -1,13 +1,59 @@
+import type { UserRole } from '@/lib/roles';
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Farmer' | 'Buyer' | 'Transporter';
+  role: UserRole | 'Transporter';
   district: string;
   status: 'Verified' | 'Pending' | 'Flagged' | 'Suspended';
   joinDate: string;
   avatarUrl?: string;
   initials: string;
+}
+
+export type OrderStatus =
+  | 'Pending'
+  | 'Accepted'
+  | 'In Transit'
+  | 'Delivered'
+  | 'Completed';
+
+export interface ProduceListing {
+  id: string;
+  farmerId: string;
+  cropName: string;
+  quantityKg: number;
+  qualityGrade: string;
+  pricePerKgRwf: number;
+  harvestDate: string;
+  images: string[];
+  status: 'active' | 'archived' | 'sold';
+  location: string;
+}
+
+export interface Order {
+  id: string;
+  orderRef: string;
+  buyerId: string;
+  listingId: string;
+  farmerId: string;
+  quantityKg: number;
+  totalRwf: number;
+  status: OrderStatus;
+  deliveryType: 'pickup' | 'delivery';
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'New Order' | 'Order Accepted' | 'Delivery Update' | 'Market Alert' | 'Weather Alert';
+  title: string;
+  body: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface Vehicle {
