@@ -1,4 +1,4 @@
-import { ROUTES } from '@/lib/routes';
+import { getRoleHome } from '@/lib/roleRedirect';
 
 export const USER_ROLES = [
   'Farmer',
@@ -20,23 +20,9 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   Admin: 'Admin',
 };
 
+/** @deprecated Prefer getRoleHome from @/lib/roleRedirect */
 export function getDashboardPath(role: UserRole): string {
-  switch (role) {
-    case 'Farmer':
-      return ROUTES.farmer.root;
-    case 'Buyer':
-      return ROUTES.buyer.root;
-    case 'Cooperative':
-      return ROUTES.cooperative;
-    case 'Transport':
-      return ROUTES.admin.fleet;
-    case 'Storage':
-      return ROUTES.storage;
-    case 'Admin':
-      return ROUTES.admin.root;
-    default:
-      return ROUTES.landing;
-  }
+  return getRoleHome(role);
 }
 
 export function isUserRole(value: unknown): value is UserRole {

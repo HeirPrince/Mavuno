@@ -1,32 +1,67 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/react';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth, useUser } from '@clerk/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { profileSetupSchema } from '@/lib/schemas/profile';
 import { RWANDA_DISTRICTS, RWANDA_SECTORS, type RwandaDistrict } from '@/lib/rwanda';
-import { USER_ROLES, ROLE_LABELS, getDashboardPath, type UserRole } from '@/lib/roles';
-import {
-  saveLocalProfile,
-  getPendingRole,
-  clearPendingRole,
-  useProfile,
-} from '@/hooks/useProfile';
+import { ROLE_LABELS, type UserRole } from '@/lib/roles';
+import { saveLocalProfile, useProfile } from '@/hooks/useProfile';
+import { useRole } from '@/hooks/useRole';
+import { getRoleHome } from '@/lib/roleRedirect';
 import { ROUTES } from '@/lib/routes';
+import RoleSelector from '@/components/RoleSelector';
 
 type FieldErrors = Partial<Record<string, string>>;
 
 export default function OnboardingPage() {
+  const [searchParams] = useSearchParams();
+  const step = searchParams.get('step') ?? 'role';
+  const { role, isLoaded: roleLoaded } = useRole();
+  const { profile, isLoaded: profileLoaded } = useProfile();
+
+  if (!roleLoaded || !profileLoaded) {
+    return (
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (profile.onboardingComplete && role) {
+    return <Navigate to={getRoleHome(role)} replace />;
+  }
+
+  if (step === 'profile' && role) {
+    return <ProfileSetupStep role={role} />;
+  }
+
+  if (role && step !== 'role') {
+    return <Navigate to={`${ROUTES.onboarding}?step=profile`} replace />;
+  }
+
+  return (
+    <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center px-6 py-12">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-[#ece7e4] p-8 shadow-sm">
+        <RoleSelector />
+      </div>
+    </div>
+  );
+}
+
+function ProfileSetupStep({ role }: { role: UserRole }) {
   const navigate = useNavigate();
   const { user } = useUser();
-  const { profile } = useProfile();
-  const pendingRole = getPendingRole();
+  const { getToken } = useAuth();
+  const { profile, refetchProfile } = useProfile();
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
-    fullName: user?.fullName ?? '',
-    phone: '',
+    fullName: user?.fullName ?? profile.fullName,
+    phone: profile.phone,
     email: user?.primaryEmailAddress?.emailAddress ?? profile.email,
-    district: '' as RwandaDistrict | '',
-    sector: '',
-    role: (pendingRole ?? profile.role) as UserRole,
+    district: (profile.district || '') as RwandaDistrict | '',
+    sector: profile.sector,
+    role,
     farmSizeHectares: '',
     organisationType: '',
     memberCapacity: '',
@@ -60,30 +95,45 @@ export default function OnboardingPage() {
 
     setSubmitting(true);
     try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const res = await fetch('/api/auth/complete-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fullName: result.data.fullName,
+          phone: result.data.phone,
+          district: result.data.district,
+          sector: result.data.sector,
+          farmSizeHectares: result.data.farmSizeHectares,
+          organisationType: result.data.organisationType,
+          memberCapacity: result.data.memberCapacity,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save profile');
+      }
+
       saveLocalProfile({
-        role: result.data.role,
         fullName: result.data.fullName,
         phone: result.data.phone,
         district: result.data.district,
         sector: result.data.sector,
         onboardingComplete: true,
       });
-      clearPendingRole();
 
-      if (user) {
-        await user.update({
-          unsafeMetadata: {
-            role: result.data.role,
-            fullName: result.data.fullName,
-            phone: result.data.phone,
-            district: result.data.district,
-            sector: result.data.sector,
-            onboardingComplete: true,
-          },
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      await refetchProfile();
+      await user?.reload();
 
-      navigate(getDashboardPath(result.data.role), { replace: true });
+      navigate(getRoleHome(role), { replace: true });
     } catch {
       setErrors({ form: 'Could not save profile. Please try again.' });
     } finally {
@@ -132,23 +182,18 @@ export default function OnboardingPage() {
             <input
               type="email"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className={inputClass(errors.email)}
+              readOnly
+              className={`${inputClass(errors.email)} bg-gray-50`}
             />
           </Field>
 
-          <Field label="User Type" error={errors.role}>
-            <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-              className={inputClass(errors.role)}
-            >
-              {USER_ROLES.filter((r) => r !== 'Admin').map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </select>
+          <Field label="User Type">
+            <input
+              type="text"
+              value={ROLE_LABELS[role]}
+              readOnly
+              className={`${inputClass()} bg-gray-50`}
+            />
           </Field>
 
           <Field label="District" error={errors.district}>
@@ -184,7 +229,7 @@ export default function OnboardingPage() {
             </select>
           </Field>
 
-          {form.role === 'Farmer' ? (
+          {role === 'Farmer' ? (
             <Field label="Farm size (hectares)" error={errors.farmSizeHectares}>
               <input
                 type="number"
@@ -197,7 +242,7 @@ export default function OnboardingPage() {
             </Field>
           ) : null}
 
-          {form.role === 'Buyer' ? (
+          {role === 'Buyer' ? (
             <Field label="Organisation type" error={errors.organisationType}>
               <input
                 type="text"
@@ -209,7 +254,7 @@ export default function OnboardingPage() {
             </Field>
           ) : null}
 
-          {form.role === 'Cooperative' ? (
+          {role === 'Cooperative' ? (
             <Field label="Member capacity" error={errors.memberCapacity}>
               <input
                 type="number"

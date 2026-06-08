@@ -1,12 +1,10 @@
+import './env.js';
 import express from 'express';
 import path from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import type { AuditMetrics } from '../src/lib/types';
-
-dotenv.config({ path: '.env.local' });
-dotenv.config();
+import authRouter from './routes/auth.js';
 
 function resolveClerkPublishableKeyFromEnv(): string | undefined {
   for (const key of [
@@ -32,6 +30,8 @@ const PORT = Number(process.env.PORT) || 3001;
 
 const app = express();
 app.use(express.json({ limit: '32kb' }));
+
+app.use('/api/auth', authRouter);
 
 app.post('/api/ai/audit', async (req, res) => {
   const apiKey = process.env.DEEPSEEK_API_KEY;

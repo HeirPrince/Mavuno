@@ -1,12 +1,15 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { Trash2 } from 'lucide-react';
 import { produceListingSchema } from '@/lib/schemas/produceListing';
 import { RWANDA_DISTRICTS } from '@/lib/rwanda';
 import { useToast } from '@/components/feedback/Toast';
+import { useProduceListings } from '@/hooks/useProduceListings';
 
 type FieldErrors = Partial<Record<string, string>>;
 
 export default function ProduceListings() {
   const { showToast } = useToast();
+  const { listings, addListing, deleteListing, canSave } = useProduceListings();
   const [form, setForm] = useState({
     cropName: '',
     quantityKg: '',
@@ -18,8 +21,9 @@ export default function ProduceListings() {
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors({});
 
@@ -38,17 +42,39 @@ export default function ProduceListings() {
       return;
     }
 
-    showToast('Listing saved locally. Supabase persistence coming in Phase 1.', 'success');
-    setShowForm(false);
-    setForm({
-      cropName: '',
-      quantityKg: '',
-      unit: 'kg',
-      harvestDate: '',
-      location: '',
-      qualityGrade: 'Grade A',
-      pricePerKgRwf: '',
-    });
+    if (!canSave) {
+      showToast('Sign in to save listings.', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await addListing(result.data);
+      showToast('Listing saved.', 'success');
+      setShowForm(false);
+      setForm({
+        cropName: '',
+        quantityKg: '',
+        unit: 'kg',
+        harvestDate: '',
+        location: '',
+        qualityGrade: 'Grade A',
+        pricePerKgRwf: '',
+      });
+    } catch {
+      showToast('Could not save listing. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, cropName: string) => {
+    try {
+      await deleteListing(id);
+      showToast(`Removed ${cropName} from your listings.`, 'success');
+    } catch {
+      showToast('Could not remove listing.', 'error');
+    }
   };
 
   return (
@@ -145,19 +171,59 @@ export default function ProduceListings() {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="w-full bg-primary text-white py-3 rounded-xl font-sans font-bold text-sm hover:bg-primary/90 cursor-pointer"
+              disabled={submitting}
+              className="w-full bg-primary text-white py-3 rounded-xl font-sans font-bold text-sm hover:bg-primary/90 disabled:opacity-60 cursor-pointer"
             >
-              Save Listing
+              {submitting ? 'Saving…' : 'Save Listing'}
             </button>
           </div>
         </form>
       ) : null}
 
-      <div className="bg-surface-low rounded-2xl border border-[#ece7e4] p-8 text-center">
-        <p className="font-sans text-on-surface-variant">
-          No active listings. Add your first produce listing above.
-        </p>
-      </div>
+      {listings.length === 0 ? (
+        <div className="bg-surface-low rounded-2xl border border-[#ece7e4] p-8 text-center">
+          <p className="font-sans text-on-surface-variant">
+            No active listings. Add your first produce listing above.
+          </p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-4">
+          {listings.map((listing) => (
+            <article
+              key={listing.id}
+              className="bg-white rounded-2xl border border-[#ece7e4] p-5 flex flex-col"
+            >
+              <div className="flex justify-between items-start gap-3">
+                <div>
+                  <h3 className="font-serif font-bold text-primary">{listing.cropName}</h3>
+                  <p className="font-sans text-sm text-on-surface-variant mt-1">
+                    {listing.location} · {listing.qualityGrade}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(listing.id, listing.cropName)}
+                  className="p-2 rounded-lg text-on-surface-variant hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  aria-label={`Delete ${listing.cropName} listing`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="mt-4 flex justify-between items-center font-sans text-sm">
+                <span className="font-bold text-secondary">
+                  {listing.pricePerKgRwf.toLocaleString()} RWF/kg
+                </span>
+                <span className="text-on-surface-variant">
+                  {listing.quantityKg.toLocaleString()} {listing.unit}
+                </span>
+              </div>
+              <p className="font-sans text-xs text-on-surface-variant mt-2">
+                Harvested {listing.harvestDate}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

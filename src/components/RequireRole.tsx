@@ -1,7 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { useRole } from '@/hooks/useRole';
 import { useProfile } from '@/hooks/useProfile';
-import { getDashboardPath, type UserRole } from '@/lib/roles';
+import { getRoleHome } from '@/lib/roleRedirect';
 import { ROUTES } from '@/lib/routes';
+import type { UserRole } from '@/lib/roles';
 
 interface RequireRoleProps {
   allowed: UserRole | UserRole[];
@@ -19,19 +21,24 @@ function AuthLoading() {
 }
 
 export default function RequireRole({ allowed }: RequireRoleProps) {
-  const { profile, isLoaded } = useProfile();
+  const { role, isLoaded: roleLoaded } = useRole();
+  const { profile, isLoaded: profileLoaded } = useProfile();
   const allowedRoles = Array.isArray(allowed) ? allowed : [allowed];
 
-  if (!isLoaded) {
+  if (!roleLoaded || !profileLoaded) {
     return <AuthLoading />;
   }
 
-  if (!profile.onboardingComplete && profile.role !== 'Admin') {
-    return <Navigate to={ROUTES.onboarding} replace />;
+  if (!role) {
+    return <Navigate to={`${ROUTES.onboarding}?step=role`} replace />;
   }
 
-  if (!allowedRoles.includes(profile.role)) {
-    return <Navigate to={getDashboardPath(profile.role)} replace />;
+  if (!profile.onboardingComplete) {
+    return <Navigate to={`${ROUTES.onboarding}?step=profile`} replace />;
+  }
+
+  if (!allowedRoles.includes(role)) {
+    return <Navigate to={getRoleHome(role)} replace />;
   }
 
   return <Outlet />;

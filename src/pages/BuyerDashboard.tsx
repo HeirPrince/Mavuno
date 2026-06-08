@@ -1,14 +1,21 @@
 import { Link } from 'react-router-dom';
 import { Search, ShoppingBag, Truck } from 'lucide-react';
+import { useUser } from '@clerk/react';
+import { useActiveListingsCount } from '@/hooks/useProduceListings';
+import { useOrderStats } from '@/hooks/useOrders';
 import { ROUTES } from '@/lib/routes';
 
 export default function BuyerDashboard() {
+  const { user } = useUser();
+  const { data: listingCount = 0 } = useActiveListingsCount();
+  const { data: orderStats } = useOrderStats(user?.id ?? '', 'Buyer');
+
   return (
     <div className="space-y-8">
       <div className="grid sm:grid-cols-3 gap-6">
-        <StatCard label="Available Produce" value="0 listings" />
-        <StatCard label="Active Orders" value="0" />
-        <StatCard label="In Delivery" value="0" />
+        <StatCard label="Available Produce" value={`${listingCount} listings`} />
+        <StatCard label="Active Orders" value={String(orderStats?.active ?? 0)} />
+        <StatCard label="In Delivery" value={String(orderStats?.inDelivery ?? 0)} />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -42,18 +49,20 @@ export default function BuyerDashboard() {
         </Link>
       </div>
 
-      <div className="bg-surface-low rounded-2xl p-8 border border-[#ece7e4] text-center">
-        <ShoppingBag className="w-10 h-10 text-primary/40 mx-auto" />
-        <p className="font-sans text-on-surface-variant mt-4">
-          No active orders yet. Browse the marketplace to place your first order.
-        </p>
-        <Link
-          to={ROUTES.marketplace}
-          className="inline-block mt-4 bg-primary text-white px-6 py-2.5 rounded-xl font-sans text-sm font-bold hover:bg-primary/90 transition-all"
-        >
-          Browse Marketplace
-        </Link>
-      </div>
+      {(orderStats?.active ?? 0) === 0 ? (
+        <div className="bg-surface-low rounded-2xl p-8 border border-[#ece7e4] text-center">
+          <ShoppingBag className="w-10 h-10 text-primary/40 mx-auto" />
+          <p className="font-sans text-on-surface-variant mt-4">
+            No active orders yet. Browse the marketplace to place your first order.
+          </p>
+          <Link
+            to={ROUTES.marketplace}
+            className="inline-block mt-4 bg-primary text-white px-6 py-2.5 rounded-xl font-sans text-sm font-bold hover:bg-primary/90 transition-all"
+          >
+            Browse Marketplace
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

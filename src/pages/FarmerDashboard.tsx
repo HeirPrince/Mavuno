@@ -1,16 +1,45 @@
 import type { ComponentType } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '@clerk/react';
 import { FileText, ShoppingBag, DollarSign, Bell, Plus, Truck } from 'lucide-react';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
+import { useOrderStats } from '@/hooks/useOrders';
+import { useProduceListings } from '@/hooks/useProduceListings';
 import { ROUTES } from '@/lib/routes';
 
-const CARDS = [
-  { label: 'Active Listings', value: '0', icon: FileText, color: 'bg-primary/10 text-primary' },
-  { label: 'Orders', value: '0', icon: ShoppingBag, color: 'bg-secondary/10 text-secondary' },
-  { label: 'Revenue (RWF)', value: '0', icon: DollarSign, color: 'bg-tertiary/10 text-tertiary' },
-  { label: 'Notifications', value: '0', icon: Bell, color: 'bg-primary/10 text-primary' },
-];
-
 export default function FarmerDashboard() {
+  const { user } = useUser();
+  const { listings } = useProduceListings();
+  const { data: orderStats } = useOrderStats(user?.id ?? '', 'Farmer');
+  const { unreadCount } = useUnreadNotificationCount(user?.id ?? '');
+
+  const CARDS = [
+    {
+      label: 'Active Listings',
+      value: String(listings.length),
+      icon: FileText,
+      color: 'bg-primary/10 text-primary',
+    },
+    {
+      label: 'Orders',
+      value: String(orderStats?.active ?? 0),
+      icon: ShoppingBag,
+      color: 'bg-secondary/10 text-secondary',
+    },
+    {
+      label: 'Revenue (RWF)',
+      value: (orderStats?.revenue ?? 0).toLocaleString(),
+      icon: DollarSign,
+      color: 'bg-tertiary/10 text-tertiary',
+    },
+    {
+      label: 'Notifications',
+      value: String(unreadCount),
+      icon: Bell,
+      color: 'bg-primary/10 text-primary',
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">

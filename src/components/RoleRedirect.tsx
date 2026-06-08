@@ -1,12 +1,14 @@
 import { Navigate } from 'react-router-dom';
+import { useRole } from '@/hooks/useRole';
 import { useProfile } from '@/hooks/useProfile';
-import { getDashboardPath } from '@/lib/roles';
+import { getRoleHome } from '@/lib/roleRedirect';
 import { ROUTES } from '@/lib/routes';
 
 export default function RoleRedirect() {
-  const { profile, isLoaded } = useUserRedirect();
+  const { role, isLoaded: roleLoaded } = useRole();
+  const { profile, isLoaded: profileLoaded } = useProfile();
 
-  if (!isLoaded) {
+  if (!roleLoaded || !profileLoaded) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -14,13 +16,13 @@ export default function RoleRedirect() {
     );
   }
 
-  if (!profile.onboardingComplete && profile.role !== 'Admin') {
-    return <Navigate to={ROUTES.onboarding} replace />;
+  if (!role) {
+    return <Navigate to={`${ROUTES.onboarding}?step=role`} replace />;
   }
 
-  return <Navigate to={getDashboardPath(profile.role)} replace />;
-}
+  if (!profile.onboardingComplete) {
+    return <Navigate to={`${ROUTES.onboarding}?step=profile`} replace />;
+  }
 
-function useUserRedirect() {
-  return useProfile();
+  return <Navigate to={getRoleHome(role)} replace />;
 }

@@ -17,8 +17,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@clerk/backend": "^3.5.0",
     "@clerk/react": "^6.7.3",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.107.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@tanstack/react-query": "^5.101.0",
     "@vitejs/plugin-react": "^5.0.4",
     "concurrently": "^9.1.2",
     "dotenv": "^17.2.3",
